@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useDevices } from './hooks/useDevices';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useAuth } from './hooks/useAuth';
 import { timeAgo } from './utils.js';
 import StatusPill from './components/StatusPill';
 import AddDeviceForm from './components/AddDeviceForm';
 import DeviceCard from './components/DeviceCard';
 import LogPanel from './components/LogPanel';
+import Login from './components/Login';
 import { useTheme } from './hooks/useTheme';
 import ThemeToggle from './components/ThemeToggle';
 
@@ -15,6 +17,8 @@ export default function App() {
   const { devices, addDevice, removeDevice, setDeviceState } = useDevices();
   // 主题:浅色 / 深色 / 跟随系统(localStorage 持久)
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  // 鉴权:纯 TOTP,token 存 sessionStorage(关浏览器即失效)
+  const { token, login, logout, invalidate } = useAuth();
   const [deviceOnline, setDeviceOnline] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [seenTs, setSeenTs] = useState(0);
@@ -77,7 +81,7 @@ export default function App() {
     }
   }, [addLog, applyStatus, setDeviceState]);
 
-  const { connected, sendTrigger } = useWebSocket(handleMessage);
+  const { connected, sendTrigger } = useWebSocket(handleMessage, token, invalidate);
 
   const handleWake = useCallback((device) => {
     const reqId = sendTrigger(device.mac, device.ip);
@@ -114,6 +118,11 @@ export default function App() {
       onDelete={() => handleDelete(d)} />
   ), [devices, handleWake, handleDelete]);
 
+  // 未登录:只渲染登录页(TOTP),不连 WS、不加载主界面
+  if (!token) {
+    return <Login onLogin={login} />;
+  }
+
   return (
     <>
       <header className="topbar">
@@ -131,6 +140,7 @@ export default function App() {
             label={deviceStatusLabel}
             sub={`最近心跳:${timeAgo(seenTs)}`} />
           <ThemeToggle mode={themeMode} onSet={setThemeMode} />
+          <button className="btn btn-ghost btn-sm" onClick={logout} title="退出登录">退出</button>
         </div>
       </header>
 

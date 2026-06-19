@@ -43,9 +43,84 @@ const ONLINE_BROADCAST_MS = 5000;
 // ========================================
 
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 app.use(express.json());
+
+// ============== 鉴权: TOTP + 会话令牌 ==============
+// 设计:纯 TOTP(无用户名),单 secret。登录成功发一个随机 session token,
+// 有效期 SESSION_TTL;token 存内存 Set(进程重启即全部失效,需重新登录)。
+// 浏览器侧 token 存 sessionStorage —— 关浏览器即失效(符合"每次关浏览器重验证")。
+// 受保护:/api/* 带 Authorization 头; /ws 握手带 ?token= 查询参数。
+
+const TOTP_SECRET = process.env.TOTP_SECRET || '';   // base32 (A-Z2-7)
+const SESSION_TTL_MS = (parseInt(process.env.SESSION_TTL || '43200', 10)) * 1000;
+const sessions = new Map(); // token -> { expire: ms }
+
+if (!TOTP_SECRET) {
+  console.error('[AUTH] 缺少 TOTP_SECRET 环境变量,请在 /etc/wol-server.env 配置后重启');
+}
+
+// base32 解码(RFC 4648)
+function base32Decode(str) {
+  const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0, val = 0, out = [];
+  for (const ch of str.toUpperCase().replace(/=+$/, '')) {
+    const idx = ALPHA.indexOf(ch);
+    if (idx < 0) continue;
+    val = (val << 5) | idx; bits += 5;
+    if (bits >= 8) { out.push((val >>> (bits - 8)) & 0xff); bits -= 8; }
+  }
+  return Buffer.from(out);
+}
+
+// 校验 6 位 TOTP 码;允许 ±1 个 30s 窗口容忍时钟漂移
+function verifyTotp(code) {
+  const key = base32Decode(TOTP_SECRET);
+  const step = 30;
+  const t = Math.floor(Date.now() / 1000 / step);
+  for (const offset of [0, -1, 1]) {
+    const counter = Buffer.alloc(8);
+    counter.writeBigUInt64BE(BigInt(t + offset));
+    const hmac = crypto.createHmac('sha1', key).update(counter).digest();
+    const o = hmac[hmac.length - 1] & 0x0f;
+    const truncated = ((hmac[o] & 0x7f) << 24 | hmac[o+1] << 16 | hmac[o+2] << 8 | hmac[o+3]) % 1000000;
+    if (String(truncated).padStart(6, '0') === String(code).trim()) return true;
+  }
+  return false;
+}
+
+function createSession() {
+  const token = crypto.randomBytes(24).toString('hex');
+  sessions.set(token, { expire: Date.now() + SESSION_TTL_MS });
+  return token;
+}
+
+function isAuthorized(token) {
+  if (!token) return false;
+  const s = sessions.get(token);
+  if (!s) return false;
+  if (Date.now() > s.expire) { sessions.delete(token); return false; }
+  return true;
+}
+
+// 从请求取 token:头 Authorization: Bearer xxx,或查询参数 ?token= (WS 用)
+function extractToken(req) {
+  const auth = req.headers['authorization'];
+  if (auth && auth.startsWith('Bearer ')) return auth.slice(7).trim();
+  if (req.query && req.query.token) return String(req.query.token);
+  return null;
+}
+
+// 统一鉴权中间件:保护 /api/*
+function requireAuth(req, res, next) {
+  if (!isAuthorized(extractToken(req))) {
+    return res.status(401).json({ ok: false, error: '未登录或会话已过期' });
+  }
+  next();
+}
+// =================================================
 
 // 静态前端托管:优先用 React 构建产物 (public-react/dist),
 // 不存在时回退到原生版 public/(直接可用的旧前端)。
@@ -61,13 +136,65 @@ app.use(express.static(STATIC_ROOT));
 const indexFile = path.join(STATIC_ROOT, 'index.html');
 if (fs.existsSync(indexFile)) {
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/ws') || req.path.startsWith('/api')) return next();
+    // /ws 由 WebSocket 服务接管; /api/* 走各自路由;其余回退 index.html(SPA)
+    if (req.path.startsWith('/api')) return next();
     res.sendFile(indexFile);
   });
 }
 
+// ---- 鉴权 API ----
+// 登录:POST /api/login { code: "123456" } -> { ok, token }
+app.post('/api/login', (req, res) => {
+  const code = req.body && req.body.code;
+  if (!code || !String(code).match(/^\d{6}$/)) {
+    return res.status(400).json({ ok: false, error: '请输入 6 位验证码' });
+  }
+  if (!TOTP_SECRET) {
+    return res.status(500).json({ ok: false, error: '服务端未配置 TOTP_SECRET' });
+  }
+  if (!verifyTotp(code)) {
+    return res.status(401).json({ ok: false, error: '验证码错误或已过期' });
+  }
+  const token = createSession();
+  res.json({ ok: true, token, ttl: Math.floor(SESSION_TTL_MS / 1000) });
+});
+
+// 登出:POST /api/logout -> 注销当前 token
+app.post('/api/logout', (req, res) => {
+  const token = extractToken(req);
+  if (token) sessions.delete(token);
+  res.json({ ok: true });
+});
+
+// 检查当前会话是否有效(前端刷新时探测,免得直接打点子页面)
+app.get('/api/session', requireAuth, (req, res) => {
+  res.json({ ok: true });
+});
+
+// 首次配对:返回 otpauth URL,供手机 Authenticator 手动录入
+// (无需登录即可访问 —— 拿不到 secret 也登不进,且 secret 本就是登录凭据的一部分)
+app.get('/api/otpauth', (req, res) => {
+  if (!TOTP_SECRET) return res.status(500).json({ ok: false, error: '未配置 TOTP_SECRET' });
+  const label = encodeURIComponent('WoL:admin');
+  const issuer = encodeURIComponent('WoL');
+  const url = `otpauth://totp/${label}?secret=${TOTP_SECRET}&issuer=${issuer}&period=30&digits=6&algorithm=SHA1`;
+  // 同时给纯文本 secret,供"手动输入"模式
+  res.json({ ok: true, secret: TOTP_SECRET, url });
+});
+
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+// WebSocket 握手前校验 token:未携带或无效直接拒绝(返回 401)
+const wss = new WebSocketServer({
+  server,
+  path: '/ws',
+  verifyClient: (info, cb) => {
+    // 从查询串 ?token=xxx 取令牌
+    const u = new URL(info.req.url, 'http://localhost');
+    const token = u.searchParams.get('token');
+    if (isAuthorized(token)) cb(true);
+    else cb(false, 401, '未登录');
+  },
+});
 
 // ---- 设备在线状态 (服务端侧维护,定期广播给前端) ----
 let lastHeartbeatTs = 0;   // 最近一次心跳的 epoch ms

@@ -1,6 +1,10 @@
 # ESP32 WoL 服务端
 
-为 [ESP32-C3 WoL 控制器](../src/main.cpp) 提供 Web 控制台:浏览器界面 → 本服务端 → MQTT → ESP32 设备发送魔术包。
+为 [ESP32-C3 WoL 控制器](https://github.com/baijubuyisama/RemoteWoL4Esp32) 提供 Web 控制台:浏览器界面 → 本服务端 → MQTT → ESP32 设备发送魔术包。
+
+> **相关仓库**
+> * **本仓库（服务端）**: https://github.com/baijubuyisama/Wol4Esp32_server — Node.js Web 控制台（React + WebSocket + MQTT 转发 + TOTP 鉴权）。
+> * **固件 / 客户端**: https://github.com/baijubuyisama/RemoteWoL4Esp32 — ESP32-C3 固件，订阅 MQTT 主题、发魔术包、Ping 在线检测。本仓库内的 `../src/main.cpp` 即该固件源码。
 
 ```
  浏览器 (React UI) ──WebSocket──▶ 本服务端 (Node.js) ──MQTT──▶ ESP32 固件 ──▶ 目标主机

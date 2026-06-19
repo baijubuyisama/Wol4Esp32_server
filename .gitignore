@@ -1,0 +1,22 @@
+# 依赖
+node_modules/
+
+# 构建产物(server.js 会托管 public-react/dist,但产物不入库,部署时现场构建)
+dist/
+public-react/dist/
+
+# 凭据 / 本地备忘(明文 broker 密码等,严禁入库)
+*.local
+.secrets.local
+
+# Vite 缓存
+.vite/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 编辑器/系统
+.DS_Store
+.vscode/
+.idea/

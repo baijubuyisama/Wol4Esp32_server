@@ -1,0 +1,20 @@
+{
+  "name": "esp32-wol-server",
+  "version": "1.0.0",
+  "description": "ESP32-C3 Wake-on-LAN 控制器的 Web 服务端与前端",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["esp32", "wake-on-lan", "wol", "mqtt", "iot"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "mqtt": "^5.10.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

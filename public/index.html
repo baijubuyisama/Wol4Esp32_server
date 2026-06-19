@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESP32 WoL 控制台</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">⚡</div>
+      <div>
+        <h1>ESP32 WoL 控制台</h1>
+        <span class="subtitle">Wake-on-LAN 远程唤醒 · MQTT 转发</span>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-pill" id="wsStatus" title="浏览器与服务端的 WebSocket 连接">
+        <span class="dot"></span>
+        <div class="status-stack">
+          <span class="ws-label">服务端未连接</span>
+        </div>
+      </div>
+      <div class="status-pill" id="deviceStatus" title="ESP32 设备在线状态(基于心跳)">
+        <span class="dot" id="statusDot"></span>
+        <div class="status-stack">
+          <span id="statusText">设备未知</span>
+          <span class="status-sub" id="lastSeenText">最近心跳:从未</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel devices-panel">
+      <div class="panel-head">
+        <h2>设备列表</h2>
+        <button id="addBtn" class="btn btn-primary btn-sm">+ 添加设备</button>
+      </div>
+
+      <form id="addForm" class="add-form hidden" autocomplete="off">
+        <div class="form-row">
+          <input type="text" id="devName" placeholder="昵称(如:主机 PC)" />
+          <input type="text" id="devMac" placeholder="MAC AA:BB:CC:DD:EE:FF" />
+          <input type="text" id="devIp" placeholder="IP 192.168.1.100(可选)" />
+        </div>
+        <div class="form-actions">
+          <span class="form-hint">MAC 支持 aabbccddeeff 或 AA-BB-... 格式,会自动规范化</span>
+          <div>
+            <button type="button" id="cancelAdd" class="btn btn-ghost btn-sm">取消</button>
+            <button type="submit" class="btn btn-primary btn-sm">保存</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="deviceList" class="device-list"></div>
+      <div id="emptyHint" class="empty-hint">还没有设备,点击「添加设备」开始。</div>
+    </section>
+
+    <aside class="panel log-panel">
+      <div class="panel-head">
+        <h2>实时日志</h2>
+        <button id="clearLog" class="btn btn-ghost btn-sm">清空</button>
+      </div>
+      <div id="logList" class="log-list"></div>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

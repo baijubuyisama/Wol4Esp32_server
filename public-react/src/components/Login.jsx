@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 
 // 登录页:输入 6 位 TOTP 验证码。
-// 首次使用需先在手机 Authenticator 里手动录入 secret(点"首次配对"展开查看)。
+// secret 由服务端管理者带外提供(见本地 .secrets.local),本页面不提供任何"配对/获取 secret"入口。
+// 首次使用:在手机验证器中手动录入服务端给定的 secret,之后每次输入其生成的 6 位码登录。
 export default function Login({ onLogin, authError }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showSetup, setShowSetup] = useState(false);
-  const [setup, setSetup] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current && inputRef.current.focus(); }, []);
@@ -24,21 +23,6 @@ export default function Login({ onLogin, authError }) {
     } finally {
       setBusy(false);
     }
-  };
-
-  // 拉取 otpauth URL + secret 供手动录入
-  const loadSetup = async () => {
-    if (setup) { setShowSetup(s => !s); return; }
-    try {
-      const res = await fetch('/api/otpauth');
-      const d = await res.json();
-      if (d.ok) { setSetup(d); setShowSetup(true); }
-      else setError(d.error || '获取配对信息失败');
-    } catch { setError('获取配对信息失败'); }
-  };
-
-  const copy = (txt) => {
-    navigator.clipboard && navigator.clipboard.writeText(txt).catch(() => {});
   };
 
   return (
@@ -67,32 +51,6 @@ export default function Login({ onLogin, authError }) {
         <button className="btn btn-primary login-btn" type="submit" disabled={busy || code.length !== 6}>
           {busy ? '验证中…' : '登录'}
         </button>
-
-        <button type="button" className="login-setup-toggle" onClick={loadSetup}>
-          {showSetup ? '收起配对信息' : '首次使用? 配对验证器'}
-        </button>
-
-        {showSetup && setup && (
-          <div className="login-setup">
-            <p>在手机验证器(如 Google/Microsoft Authenticator)中选择"手动输入",填入:</p>
-            <div className="setup-row">
-              <span className="setup-label">账号</span>
-              <code>WoL:admin</code>
-            </div>
-            <div className="setup-row">
-              <span className="setup-label">密钥</span>
-              <code className="setup-secret" onClick={() => copy(setup.secret)} title="点击复制">
-                {setup.secret}
-              </code>
-            </div>
-            <div className="setup-row">
-              <span className="setup-label">类型</span>
-              <code>基于时间(TOTP),6 位,30 秒</code>
-            </div>
-            <p className="setup-hint">或用支持扫码的验证器打开此链接(已复制):</p>
-            <code className="setup-url" onClick={() => copy(setup.url)} title="点击复制">{setup.url}</code>
-          </div>
-        )}
       </form>
     </div>
   );

@@ -171,16 +171,9 @@ app.get('/api/session', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// 首次配对:返回 otpauth URL,供手机 Authenticator 手动录入
-// (无需登录即可访问 —— 拿不到 secret 也登不进,且 secret 本就是登录凭据的一部分)
-app.get('/api/otpauth', (req, res) => {
-  if (!TOTP_SECRET) return res.status(500).json({ ok: false, error: '未配置 TOTP_SECRET' });
-  const label = encodeURIComponent('WoL:admin');
-  const issuer = encodeURIComponent('WoL');
-  const url = `otpauth://totp/${label}?secret=${TOTP_SECRET}&issuer=${issuer}&period=30&digits=6&algorithm=SHA1`;
-  // 同时给纯文本 secret,供"手动输入"模式
-  res.json({ ok: true, secret: TOTP_SECRET, url });
-});
+// 注意:不提供任何获取 TOTP secret 的接口。secret 是登录凭据,
+// 只能通过带外途径(本地 .secrets.local 备忘)交给使用者手动录入验证器,
+// 绝不通过本服务分发 —— 否则任何人都能自助配对、绕过鉴权。
 
 const server = http.createServer(app);
 // WebSocket 握手前校验 token:未携带或无效直接拒绝(返回 401)

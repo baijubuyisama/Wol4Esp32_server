@@ -10,9 +10,29 @@ const OPTIONS = [
 export default function ThemeToggle({ mode, onSet }) {
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(null);
+  const [alignLeft, setAlignLeft] = useState(false);
   const rootRef = useRef(null);
 
   const current = OPTIONS.find((o) => o.value === mode) || OPTIONS[2];
+
+  // 打开时计算对齐方向:菜单默认从触发按钮右沿向左展开(right:0)。
+  // 若触发按钮偏左、向左展开会让菜单左沿超出视口,则翻转为从左沿向右展开。
+  const recomputeAlign = useCallback(() => {
+    const trigger = rootRef.current && rootRef.current.querySelector('.theme-trigger');
+    if (!trigger) return;
+    const r = trigger.getBoundingClientRect();
+    const MENU_W = 168; // 与 CSS .theme-menu min-width 一致
+    const PAD = 16;
+    setAlignLeft(r.right - MENU_W < PAD);
+  }, []);
+
+  // 打开时算一次;打开期间窗口缩放也跟随重算。
+  useEffect(() => {
+    if (!open) return;
+    recomputeAlign();
+    window.addEventListener('resize', recomputeAlign);
+    return () => window.removeEventListener('resize', recomputeAlign);
+  }, [open, recomputeAlign]);
 
   // 点外面 / Esc 关闭
   useEffect(() => {
@@ -63,7 +83,7 @@ export default function ThemeToggle({ mode, onSet }) {
       </button>
 
       {open && (
-        <ul className="theme-menu" role="listbox" aria-label="选择主题">
+        <ul className={`theme-menu ${alignLeft ? 'align-left' : ''}`} role="listbox" aria-label="选择主题">
           {OPTIONS.map((o, i) => {
             const selected = o.value === mode;
             const focused = i === focusIdx;

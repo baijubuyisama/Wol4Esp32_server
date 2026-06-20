@@ -638,6 +638,8 @@ body {
   right: 0;
   z-index: 40;
   min-width: 168px;
+  /* 不超过视口宽度(留两侧各 16px 边距),防止窄屏溢出 */
+  max-width: calc(100vw - 32px);
   list-style: none;
   padding: 6px;
   background: var(--surface-container);
@@ -649,6 +651,12 @@ body {
   gap: 2px;
   /* MD3 Expressive:出场下落 + 轻缩放 */
   animation: dropIn var(--dur-med) var(--ease-spring);
+}
+/* 翻转对齐:触发按钮太靠左、菜单向左展开会溢出视口左沿时,
+   由 JS 给 .theme-menu 加 .align-left,改为从触发按钮左沿向右展开。 */
+.theme-menu.align-left {
+  right: auto;
+  left: 0;
 }
 @keyframes dropIn {
   from { opacity: 0; transform: translateY(-6px) scale(.97); }

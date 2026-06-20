@@ -113,8 +113,6 @@ TOTP_SECRET=JBSWY3DPEHPK3PXP npm start
 
 ### 首次配对(带外)
 
-> ⚠️ **secret 是登录凭据,服务端绝不通过任何接口分发。** 早期版本曾有一个未鉴权的 `/api/otpauth` 端点会把 secret 直接吐给任意访问者——已删除。任何人拿到 secret 即可自助登录,故 secret 必须带外交接。
-
 生成一个 base32 密钥并得到 otpauth URL(本地执行,**不要把输出贴到任何公网地方**):
 
 ```bash

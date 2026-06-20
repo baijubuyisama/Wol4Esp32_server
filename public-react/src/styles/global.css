@@ -216,14 +216,14 @@ body {
 /* M3 state layer 工具:用于 hover/focus/pressed 叠加 */
 @keyframes spin      { to { transform: rotate(360deg); } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes logIn     { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes logIn     { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes m3Busy    { 0%,100% { background-color: var(--surface-container); }
                         50%    { background-color: var(--surface-container-high); } }
 
 /* Expressive:卡片入场编排(stagger 由 :nth-child 间隔) */
 @keyframes cardIn {
-  from { opacity: 0; transform: translateY(10px) scale(.98); }
-  to   { opacity: 1; transform: translateY(0)   scale(1); }
+  from { opacity: 0; transform: translateY(18px) scale(.94); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);  filter: blur(0); }
 }
 /* Expressive:品牌 logo 轻微呼吸 */
 @keyframes logoPulse {
@@ -482,12 +482,12 @@ body {
               border-color var(--dur-med) var(--ease-standard),
               transform var(--dur-med) var(--ease-spring);
   overflow: hidden;
-  animation: cardIn var(--dur-slow) var(--ease-spring) both;
+  animation: cardIn var(--dur-slow) var(--ease-spring) backwards;
 }
 .device-card:hover {
   background: var(--surface-container-high);
   box-shadow: var(--e3);
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.01);
 }
 /* 左侧状态色条 */
 .device-card::before {
@@ -766,3 +766,31 @@ body {
   color: var(--on-error-container);
   font-size: 13px;
 }
+
+/* ============================================================
+   入场动画增强(MD3 Expressive:多层 stagger,首屏更有节奏)
+   - fill 统一用 backwards:播完释放 transform,避免与 sticky 定位、
+     hover 上浮冲突(原 cardIn 用 both 会锁住 transform,hover 失效)。
+   ============================================================ */
+/* 左右大面板:从下方浮入,右面板略晚 */
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.panel { animation: panelIn var(--dur-slow) var(--ease-emphasized) backwards; }
+.devices-panel { animation-delay: .04s; }
+.log-panel { animation-delay: .14s; }
+
+/* 顶栏:从上方滑入 */
+@keyframes barIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.topbar { animation: barIn var(--dur-med) var(--ease-emphasized) backwards; }
+
+/* 登录卡片:弹性弹入(首屏焦点) */
+@keyframes loginIn {
+  from { opacity: 0; transform: translateY(20px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.login-card { animation: loginIn var(--dur-slow) var(--ease-spring) backwards; }

@@ -109,14 +109,15 @@ export default function App() {
   }, [removeDevice, addLog]);
 
   const deviceStatusLabel = deviceOnline
-    ? '设备在线'
-    : (seenTs ? '设备离线' : '设备未知');
+    ? '网关在线'
+    : (seenTs ? '网关离线' : '网关未知');
 
   const devicesList = useMemo(() => devices.map(d =>
     <DeviceCard key={d.id} device={d}
+      deviceOnline={deviceOnline}
       onWake={() => handleWake(d)}
       onDelete={() => handleDelete(d)} />
-  ), [devices, handleWake, handleDelete]);
+  ), [devices, deviceOnline, handleWake, handleDelete]);
 
   // 未登录:只渲染登录页(TOTP),不连 WS、不加载主界面
   if (!token) {

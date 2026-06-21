@@ -565,6 +565,12 @@ body {
 .card-actions { display: flex; gap: 9px; align-items: center; }
 .wake-btn { flex: 0 0 auto; }
 .del-btn { margin-left: auto; }
+/* 设备离线时的禁用提示 */
+.offline-hint {
+  margin-top: 10px;
+  font-size: var(--fs-body-s);
+  color: var(--c-error);
+}
 .del-btn:hover { color: var(--md-error);
                  background: rgba(217,48,37,.10);
                  background: color-mix(in srgb, var(--md-error) 10%, transparent); }

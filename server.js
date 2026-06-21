@@ -36,8 +36,8 @@ const TOPIC_HEARTBEAT = 'home/wol/heartbeat';
 const HTTP_PORT = parseInt(process.env.PORT || '3000', 10);
 
 // 心跳判定:超过该时长未收到心跳则认为 ESP32 设备离线
-// (固件每 10s 发一次,留 3 倍余量)
-const HEARTBEAT_TIMEOUT_MS = 30000;
+// (固件每 10s 发一次;超过一个周期未收到即判离线,前端据此禁用唤醒)
+const HEARTBEAT_TIMEOUT_MS = 10000;
 // 在线状态广播间隔
 const ONLINE_BROADCAST_MS = 5000;
 // ========================================
